@@ -62,10 +62,10 @@ enum UserScripts {
         };
 
         function checkAutomationButtons() {
-            // Only perform skip checks if a video is present (in player view)
-            // This prevents any observer overhead during login or profile selection
+            // Only perform skip checks if a video is actively playing
+            // This avoids running queries during subtitles or catalog browsing, keeping CPU usage low
             const video = document.querySelector('video');
-            if (!video) return;
+            if (!video || video.paused) return;
 
             if (autoSkipIntroEnabled) {
                 const skipBtn = document.querySelector('[data-uia="player-skip-intro"]') ||
@@ -84,15 +84,9 @@ enum UserScripts {
             }
         }
 
-        // MutationObserver to catch skip buttons the moment they appear
-        const observer = new MutationObserver(() => {
-            checkAutomationButtons();
-        });
-
-        observer.observe(document.documentElement, {
-            childList: true,
-            subtree: true
-        });
+        // Lightweight interval (every 1.5s) instead of high-frequency MutationObserver
+        // Dramatically reduces CPU overhead and thermals during playback
+        setInterval(checkAutomationButtons, 1500);
 
         // Periodic state sync to macOS Now Playing Info
         let hadVideo = false;

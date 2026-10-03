@@ -85,17 +85,34 @@ swift run
 ```
 
 ### Option 2: Build a Standalone `.app` Bundle
-To generate a release `.app` that you can place in your `/Applications` folder:
+To generate an optimized release `.app` and install it:
 
 ```bash
+# Build the release bundle
 ./scripts/build_app.sh
-open dist/FlixWrapper.app
+
+# Copy to Applications for Spotlight indexing
+cp -r dist/FlixWrapper.app /Applications/
+
+# Launch anytime via Spotlight: ⌘ + Space -> FlixWrapper
 ```
 
-Or copy it to your Applications:
-```bash
-cp -r dist/FlixWrapper.app /Applications/
-```
+---
+
+## 🔧 Troubleshooting & Tips
+
+* **Launching with Spotlight (`⌘ + Space`):**  
+  Copying `FlixWrapper.app` into `/Applications/` allows macOS Spotlight to index it immediately. Simply press `⌘ + Space`, type `FlixWrapper`, and press `Enter`.
+* **Gatekeeper Notice ("App from an unidentified developer"):**  
+  If downloading pre-built binaries, clear the quarantine attribute:
+  ```bash
+  xattr -cr /Applications/FlixWrapper.app
+  ```
+* **Developer Rebuilds (Keychain Prompt):**  
+  If actively modifying source code and recompiling multiple ad-hoc builds in a row, macOS Keychain may ask for permission. Click **Always Allow**, or reset the temporary development key with:
+  ```bash
+  security delete-generic-password -l "FlixWrapper WebCrypto Master Key"
+  ```
 
 ---
 
