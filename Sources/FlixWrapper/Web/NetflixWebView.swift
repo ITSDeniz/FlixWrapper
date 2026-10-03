@@ -105,6 +105,26 @@ final class NetflixWebView: WKWebView {
         self.load(request)
     }
     
+    // MARK: - Domain Whitelist Helper
+    
+    func isAllowedDomain(host: String) -> Bool {
+        let allowedDomains = [
+            "netflix.com",
+            "nflxvideo.net",
+            "nflximg.net",
+            "nflxext.com",
+            "nflxso.net",
+            "google.com",
+            "gstatic.com",
+            "recaptcha.net",
+            "arkoselabs.com",
+            "funcaptcha.com"
+        ]
+        return allowedDomains.contains { allowed in
+            host == allowed || host.hasSuffix("." + allowed)
+        }
+    }
+    
     // MARK: - Video Controls & Actions
     
     func togglePlayPause() {
@@ -186,24 +206,7 @@ extension NetflixWebView: WKNavigationDelegate {
         }
         
         let host = url.host?.lowercased() ?? ""
-        
-        // 3. Known streaming and verification domains allowed within the app
-        let allowedDomains = [
-            "netflix.com",
-            "nflxvideo.net",
-            "nflximg.net",
-            "nflxext.com",
-            "nflxso.net",
-            "google.com",
-            "gstatic.com",
-            "recaptcha.net",
-            "arkoselabs.com",
-            "funcaptcha.com"
-        ]
-        
-        let isAllowed = allowedDomains.contains { allowed in
-            host == allowed || host.hasSuffix("." + allowed)
-        }
+        let isAllowed = isAllowedDomain(host: host)
         
         if isAllowed || host.isEmpty {
             decisionHandler(.allow)
@@ -219,8 +222,21 @@ extension NetflixWebView: WKNavigationDelegate {
 
 extension NetflixWebView: WKUIDelegate {
     
-    // Support window.open / popup requests from Netflix & Captchas
+    // Support window.open / target="_blank" requests from Netflix
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if let url = navigationAction.request.url {
+            let host = url.host?.lowercased() ?? ""
+            let isAllowed = isAllowedDomain(host: host)
+            
+            // If the popup / target="_blank" is an external link (e.g. Instagram, Twitter, Help Center),
+            // open cleanly in default browser instead of taking over the app window
+            if !isAllowed && !host.isEmpty {
+                NSWorkspace.shared.open(url)
+                return nil
+            }
+        }
+        
+        // Internal popups / auth dialogs remain in-app
         if navigationAction.targetFrame == nil {
             webView.load(navigationAction.request)
         }
