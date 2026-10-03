@@ -64,7 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let playbackMenuItem = NSMenuItem()
         let playbackMenu = NSMenu(title: "Playback")
         
-        playbackMenu.addItem(withTitle: "Play / Pause", action: #selector(togglePlayPause), keyEquivalent: " ")
+        // Use Option+Space for menu bar to avoid stealing bare Space key in Search/Login input fields
+        let playPauseItem = NSMenuItem(title: "Play / Pause", action: #selector(togglePlayPause), keyEquivalent: " ")
+        playPauseItem.keyEquivalentModifierMask = [.option]
+        playbackMenu.addItem(playPauseItem)
+        
         playbackMenu.addItem(withTitle: "Skip 10s Forward", action: #selector(seekForward), keyEquivalent: "\u{F703}") // Right arrow
         playbackMenu.addItem(withTitle: "Skip 10s Backward", action: #selector(seekBackward), keyEquivalent: "\u{F702}") // Left arrow
         playbackMenu.addItem(withTitle: "Next Episode", action: #selector(nextEpisode), keyEquivalent: "n")
@@ -173,7 +177,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     @objc private func openGitHub() {
-        if let url = URL(string: "https://github.com/topics/netflix-mac") {
+        if let url = URL(string: "https://github.com/ITSDeniz/FlixWrapper") {
             NSWorkspace.shared.open(url)
         }
     }

@@ -1,6 +1,23 @@
 import Cocoa
 import WebKit
 
+// MARK: - Weak Script Message Handler Proxy (Eliminates WebKit Retain Cycles)
+
+final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
+    private weak var delegate: WKScriptMessageHandler?
+    
+    init(_ delegate: WKScriptMessageHandler) {
+        self.delegate = delegate
+        super.init()
+    }
+    
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        delegate?.userContentController(userContentController, didReceive: message)
+    }
+}
+
+// MARK: - NetflixWebView
+
 final class NetflixWebView: WKWebView {
     
     // MARK: - Initialization
@@ -44,14 +61,19 @@ final class NetflixWebView: WKWebView {
         
         super.init(frame: frame, configuration: config)
         
-        // Setup message handler for playback state sync
-        userContentController.add(self, name: "playbackState")
+        // Register message handler using a WEAK proxy to prevent memory leaks
+        userContentController.add(WeakScriptMessageHandler(self), name: "playbackState")
         
         setupWebView()
     }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
+        // Cleanly detach script handler to avoid any lingering references
+        configuration.userContentController.removeScriptMessageHandler(forName: "playbackState")
     }
     
     // MARK: - Setup
@@ -65,10 +87,11 @@ final class NetflixWebView: WKWebView {
             self.isInspectable = true
         }
         
-        // Set background color to match Netflix dark theme
+        // Set modern, non-private API for dark under-page background (macOS 12+)
+        let darkColor = NSColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1.0)
         self.wantsLayer = true
-        self.layer?.backgroundColor = NSColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1.0).cgColor
-        self.setValue(false, forKey: "drawsBackground")
+        self.layer?.backgroundColor = darkColor.cgColor
+        self.underPageBackgroundColor = darkColor
         
         loadNetflix()
     }
@@ -117,6 +140,25 @@ extension NetflixWebView: WKNavigationDelegate {
     
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         syncPreferencesToWeb()
+    }
+    
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        handleNavigationError(error)
+    }
+    
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        handleNavigationError(error)
+    }
+    
+    private func handleNavigationError(_ error: Error) {
+        let nsError = error as NSError
+        // Ignore user-cancelled requests (e.g. redirected or stopped)
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            return
+        }
+        
+        let offlineHTML = UserScripts.offlineHTML(errorMessage: error.localizedDescription)
+        self.loadHTMLString(offlineHTML, baseURL: AppPreferences.netflixURL)
     }
     
     func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
@@ -193,6 +235,12 @@ extension NetflixWebView: WKScriptMessageHandler {
     func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         guard message.name == "playbackState",
               let dict = message.body as? [String: Any] else { return }
+        
+        // Check if video playback was stopped / returned to catalog
+        if let isStopped = dict["isStopped"] as? Bool, isStopped {
+            MediaKeyManager.shared.clearNowPlaying()
+            return
+        }
         
         let isPaused = dict["paused"] as? Bool ?? true
         let currentTime = dict["currentTime"] as? Double ?? 0.0
