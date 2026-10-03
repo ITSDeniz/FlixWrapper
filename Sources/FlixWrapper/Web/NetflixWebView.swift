@@ -13,22 +13,26 @@ final class NetflixWebView: WKWebView {
         config.mediaTypesRequiringUserActionForPlayback = []
         config.preferences.isElementFullscreenEnabled = true
         
+        // Set Safari application identity so WebKit dynamically pairs with
+        // macOS FairPlay DRM and produces an authentic Safari User-Agent without triggering bot detection
+        config.applicationNameForUserAgent = "Version/18.0 Safari/605.1.15"
+        
         // Persistent cookies & credentials so login is preserved across launches
         config.websiteDataStore = WKWebsiteDataStore.default()
         
         // User content controller for scripts and style injection
         let userContentController = WKUserContentController()
         
-        // Inject dark background CSS immediately at document start
+        // Inject dark background CSS for the MAIN frame only (never override captchas or iframes)
         let cssSource = """
         const style = document.createElement('style');
         style.innerHTML = `\(UserScripts.customCSS)`;
         document.head.appendChild(style);
         """
-        let cssScript = WKUserScript(source: cssSource, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        let cssScript = WKUserScript(source: cssSource, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         userContentController.addUserScript(cssScript)
         
-        // Inject client bridge at document end
+        // Inject client bridge at document end for main frame
         let bridgeScript = WKUserScript(
             source: UserScripts.clientBridgeScript,
             injectionTime: .atDocumentEnd,
@@ -56,13 +60,15 @@ final class NetflixWebView: WKWebView {
         self.navigationDelegate = self
         self.uiDelegate = self
         
-        // Set Safari User Agent to unlock 4K HDR & Spatial Audio stream delivery
-        self.customUserAgent = AppPreferences.safariUserAgent
+        // Enable Web Inspector (Right Click -> Inspect Element) for debugging
+        if #available(macOS 13.3, *) {
+            self.isInspectable = true
+        }
         
         // Set background color to match Netflix dark theme
         self.wantsLayer = true
         self.layer?.backgroundColor = NSColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1.0).cgColor
-        self.setValue(false, forKey: "drawsBackground") // WKWebView private KVC fallback for transparent loading
+        self.setValue(false, forKey: "drawsBackground")
         
         loadNetflix()
     }
@@ -119,13 +125,48 @@ extension NetflixWebView: WKNavigationDelegate {
             return
         }
         
+        // Always allow internal schemes (about, data, blob)
+        if url.scheme == "about" || url.scheme == "data" || url.scheme == "blob" {
+            decisionHandler(.allow)
+            return
+        }
+        
+        // 1. Crucial for reCAPTCHA & Arkose: ALWAYS allow subframes (iframes) without interception
+        if let targetFrame = navigationAction.targetFrame, !targetFrame.isMainFrame {
+            decisionHandler(.allow)
+            return
+        }
+        
+        // 2. Allow any non-user link click (redirects, form posts, JS navigations, OAuth tokens)
+        if navigationAction.navigationType != .linkActivated {
+            decisionHandler(.allow)
+            return
+        }
+        
         let host = url.host?.lowercased() ?? ""
         
-        // Allow Netflix navigation and auth flows
-        if host.contains("netflix.com") || host.contains("nflxvideo.net") || host.contains("nflximg.net") || host.isEmpty {
+        // 3. Known streaming and verification domains allowed within the app
+        let allowedDomains = [
+            "netflix.com",
+            "nflxvideo.net",
+            "nflximg.net",
+            "nflxext.com",
+            "nflxso.net",
+            "google.com",
+            "gstatic.com",
+            "recaptcha.net",
+            "arkoselabs.com",
+            "funcaptcha.com"
+        ]
+        
+        let isAllowed = allowedDomains.contains { allowed in
+            host == allowed || host.hasSuffix("." + allowed)
+        }
+        
+        if isAllowed || host.isEmpty {
             decisionHandler(.allow)
         } else {
-            // Open external external links (help, billing, privacy policies) in default browser
+            // Open external links (e.g. social media, third-party help) in default browser
             NSWorkspace.shared.open(url)
             decisionHandler(.cancel)
         }
@@ -136,7 +177,7 @@ extension NetflixWebView: WKNavigationDelegate {
 
 extension NetflixWebView: WKUIDelegate {
     
-    // Support window.open / popup requests from Netflix
+    // Support window.open / popup requests from Netflix & Captchas
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration, for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
         if navigationAction.targetFrame == nil {
             webView.load(navigationAction.request)
