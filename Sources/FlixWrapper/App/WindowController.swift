@@ -30,7 +30,12 @@ final class WindowController: NSWindowController {
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden
         window.backgroundColor = NSColor(red: 0.08, green: 0.08, blue: 0.08, alpha: 1.0)
-        window.isMovableByWindowBackground = true
+        
+        // Critical: Do NOT set isMovableByWindowBackground = true
+        // In AppKit, isMovableByWindowBackground intercepts mouse clicks on WKWebView,
+        // which prevents profile selection clicks and delays input field focus.
+        window.isMovableByWindowBackground = false
+        
         window.minSize = NSSize(width: 640, height: 360)
         window.setFrameAutosaveName("FlixWrapperMainWindowFrame")
         window.center()

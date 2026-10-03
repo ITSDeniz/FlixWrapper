@@ -62,6 +62,11 @@ enum UserScripts {
         };
 
         function checkAutomationButtons() {
+            // Only perform skip checks if a video is present (in player view)
+            // This prevents any observer overhead during login or profile selection
+            const video = document.querySelector('video');
+            if (!video) return;
+
             if (autoSkipIntroEnabled) {
                 const skipBtn = document.querySelector('[data-uia="player-skip-intro"]') ||
                                 document.querySelector('.watch-video--skip-content-button');
@@ -136,13 +141,6 @@ enum UserScripts {
 
         setInterval(syncPlaybackState, 1000);
     })();
-    """
-    
-    /// Dark styling tweaks to avoid white blinks during page transitions
-    static let customCSS: String = """
-    html, body {
-        background-color: #141414 !important;
-    }
     """
     
     /// Elegant offline error page when network is unavailable

@@ -37,17 +37,8 @@ final class NetflixWebView: WKWebView {
         // Persistent cookies & credentials so login is preserved across launches
         config.websiteDataStore = WKWebsiteDataStore.default()
         
-        // User content controller for scripts and style injection
+        // User content controller for scripts
         let userContentController = WKUserContentController()
-        
-        // Inject dark background CSS for the MAIN frame only (never override captchas or iframes)
-        let cssSource = """
-        const style = document.createElement('style');
-        style.innerHTML = `\(UserScripts.customCSS)`;
-        document.head.appendChild(style);
-        """
-        let cssScript = WKUserScript(source: cssSource, injectionTime: .atDocumentStart, forMainFrameOnly: true)
-        userContentController.addUserScript(cssScript)
         
         // Inject client bridge at document end for main frame
         let bridgeScript = WKUserScript(
