@@ -8,7 +8,7 @@
   <img src="https://img.shields.io/badge/License-MIT-green" alt="MIT License">
 </p>
 
-A lightweight, native macOS wrapper for Netflix built with Swift and WebKit. Engineered specifically to unlock **4K HDR (Dolby Vision / HDR10)** and **Spatial Audio (Dolby Atmos / 5.1 multichannel)** on Apple Silicon Macs—with hardware media key integration, Picture-in-Picture, floating mini-player mode, and auto-skip intro automation.
+A lightweight, native macOS wrapper for Netflix built with Swift and WebKit. Engineered specifically to unlock **4K HDR (Dolby Vision / HDR10)** and **Spatial Audio (Dolby Atmos / 5.1 multichannel)** on Apple Silicon Macs—with hardware media key integration, Picture-in-Picture, floating mini-player mode, auto-skip intro automation, and smart external link routing.
 
 ---
 
@@ -28,6 +28,8 @@ Most third-party desktop wrappers on GitHub are built with **Electron (Chromium)
 | **Always-on-Top Floating Mode** | ✅ **Yes** (`⌘⇧T`) | ❌ No | ❌ No | ⚠️ Varies |
 | **Native Picture-in-Picture** | ✅ **Yes** (`⌥⌘P`) | ⚠️ Manual | ⚠️ Manual | ❌ No |
 | **Auto-Skip Intros** | ✅ **Yes** | ❌ Manual click | ⚠️ Requires extensions | ⚠️ Varies |
+| **External Link Routing** | ✅ **Default Browser** | ❌ Opens in tab | ❌ Opens in tab | ❌ Trapped in app |
+| **Zero White-Flash Startup** | ✅ **Yes (`#141414`)** | ❌ White flash | ❌ White flash | ⚠️ Varies |
 | **Memory & Battery Footprint** | 🟢 **Ultra-low (Native)**| 🟢 Low | 🔴 Heavy | 🔴 Very Heavy |
 
 ---
@@ -45,18 +47,29 @@ To experience maximum audio-visual fidelity:
 
 ## ⌨️ Keyboard Shortcuts
 
-| Shortcut | Action |
-| :--- | :--- |
-| `Space` | Play / Pause |
-| `→` (Right Arrow) | Skip 10 seconds forward |
-| `←` (Left Arrow) | Skip 10 seconds backward |
-| `⌘ + N` | Next Episode |
-| `⌘ + ⇧ + T` | Toggle Always-on-Top (Floating Mini-Player) |
-| `⌥ + ⌘ + P` | Toggle Native Picture-in-Picture |
-| `⌃ + ⌘ + F` | Enter / Exit Full Screen |
-| `⌘ + R` | Reload Player |
-| `⌘ + W` | Close Window |
-| `⌘ + Q` | Quit FlixWrapper |
+| Shortcut | Action | Notes |
+| :--- | :--- | :--- |
+| `Space` | Play / Pause | In active video player |
+| `⌥ + Space` | Play / Pause | Global menu shortcut (safe for typing in search fields) |
+| `→` (Right Arrow) | Skip 10 seconds forward | |
+| `←` (Left Arrow) | Skip 10 seconds backward | |
+| `⌘ + N` | Next Episode | |
+| `⌘ + ⇧ + T` | Toggle Always-on-Top | Floating mini-player mode |
+| `⌥ + ⌘ + P` | Toggle Picture-in-Picture | Native macOS PiP |
+| `⌃ + ⌘ + F` | Enter / Exit Full Screen | |
+| `⌘ + R` | Reload Player | |
+| `⌘ + W` | Close Window | |
+| `⌘ + Q` | Quit FlixWrapper | |
+
+---
+
+## ✨ Standout Features
+
+* **🛡️ Smart External Link Routing:** Clicking external links (e.g. Instagram, Twitter/X, Help Center) opens them automatically in your Mac's default browser (Safari, Chrome, Arc), so you never get trapped outside Netflix.
+* **🤖 Bot & reCAPTCHA Resilient:** Tailored WebKit configuration ensures verification challenges and login flows load seamlessly without broken iframes.
+* **📶 Offline Graceful Recovery:** If your Wi-Fi drops, FlixWrapper displays a clean dark-mode connection screen with a one-click reload button.
+* **🔍 Web Inspector Support:** Right-click anywhere and select **Inspect Element** (macOS 13.3+) for instant developer inspection.
+* **🧼 Memory Safe Architecture:** Built with weak script message proxies to guarantee zero memory leaks or circular retain cycles.
 
 ---
 
